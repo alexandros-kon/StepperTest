@@ -3,13 +3,13 @@
 #include <Adafruit_MotorShield.h>
 #include <Arduino.h> 
 #include <ros.h>
-#include <std_msgs/UInt8.h>
+#include <std_msgs/Float64.h>
 #include <stdio.h>
 #include <math.h>
 
 ros::NodeHandle nh;
-std_msgs::UInt8 FSR_soft_msg;
-std_msgs::UInt8 FSR_hard_msg;
+std_msgs::Float64 FSR_soft_msg;
+std_msgs::Float64 FSR_hard_msg;
 
 
 ros::Publisher FSR_soft_pub("FSR_soft", &FSR_soft_msg); ////////////////////////////////
@@ -60,8 +60,8 @@ int ffsdata_hard = 0;
 float FSR_soft; 
 float FSR_hard; 
 
-float flag=0;
-float LAR=0;
+int flag=0;
+bool LAR = false;
 
 void int_handler()
 
@@ -79,7 +79,7 @@ void setup()
   nh.advertise(FSR_soft_pub);/////////////////
   nh.advertise(FSR_hard_pub);///////////////////
   
-  Serial.begin(115200);   
+  Serial.begin(74880);   
         
   pinMode(Q_SOFT, INPUT_PULLUP);
   pinMode(Q_HARD, INPUT_PULLUP);
@@ -99,10 +99,11 @@ void setup()
   stepper2.setMaxSpeed(50.0);
   stepper2.setAcceleration(150.0);
   stepper2.moveTo(-1000);
+
+  while(!LAR){
+    nh.spinOnce();
+  }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
- while (LAR==0){
-    Serial.print("LAR: "); 
-}
   myStepper1->setSpeed(250);  // 150 rpm  
   myStepper1->step(3500,FORWARD , DOUBLE);    //FORWARD BACKWARD
   //myStepper1->step(2000, FORWARD, DOUBLE);//CCW as you look at the face of shaft //it goes back to pillow or the finger comes to lar
@@ -111,7 +112,7 @@ void setup()
   myStepper2->step(1300,BACKWARD , DOUBLE);    //FORWARD BACKWARD
   //myStepper1->step(2000, FORWARD, DOUBLE);//CCW as you look at the face of shaft //it goes back to pillow or the finger comes to lar
   myStepper2->release();
-  
+    
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
 void loop()
