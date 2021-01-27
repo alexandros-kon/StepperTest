@@ -4,6 +4,7 @@
 #include <Arduino.h> 
 #include <ros.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/UInt16.h>
 #include <stdio.h>
 #include <math.h>
 
@@ -45,6 +46,9 @@ void backwardstep2() {
 AccelStepper stepper1(forwardstep1, backwardstep1);
 AccelStepper stepper2(forwardstep2, backwardstep2);
 
+const int buttonPin = 6;
+bool buttonState = false;
+
 float cf_soft = 72.15; // caliberation factor (19.5 was the initial)
 float cf_hard = 19.5; // caliberation factor (19.5 was the initial)
 
@@ -61,28 +65,40 @@ float FSR_soft;
 float FSR_hard; 
 
 int flag=0;
-bool LAR = false;
+int LAR = 0;
+
+void lar_cb(const std_msgs::UInt16& cmd_msg) {
+  LAR = cmd_msg.data;
+}
+
+
+ros::Subscriber<std_msgs::UInt16> sub("LAR", lar_cb);
+
 
 void int_handler()
-
 {
   hall_soft = digitalRead(Q_SOFT);   
   hall_hard = digitalRead(Q_HARD);   
-
 }
+
+
 
 void setup()
 {
   AFMS.begin();
-  
+  Serial.begin(115200);
+  nh.getHardware()->setBaud(115200);
+
   nh.initNode();
+
   nh.advertise(FSR_soft_pub);/////////////////
   nh.advertise(FSR_hard_pub);///////////////////
+
+  nh.subscribe(sub);
   
-  Serial.begin(74880);   
-        
   pinMode(Q_SOFT, INPUT_PULLUP);
   pinMode(Q_HARD, INPUT_PULLUP);
+  pinMode(buttonPin, INPUT);
 
   attachInterrupt(digitalPinToInterrupt(Q_SOFT), int_handler, CHANGE);
   attachInterrupt(digitalPinToInterrupt(Q_HARD), int_handler, CHANGE);
@@ -102,6 +118,9 @@ void setup()
 
   while(!LAR){
     nh.spinOnce();
+    Serial.print("lol\n");
+    //nh.spinOnce();
+    delay(1000);
   }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   myStepper1->setSpeed(250);  // 150 rpm  
@@ -115,9 +134,15 @@ void setup()
     
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
-void loop()
 
+void loop()
 {
+  buttonState = digitalRead(buttonPin);
+  if (buttonState) {
+    myStepper1->release();
+    myStepper2->release();
+  }
+  
   stepper1.run();
   ffsdata_soft = analogRead(ffs1_soft);
   FSR_soft = (ffsdata_soft * 5.0) / 1023.0; 
